@@ -2,12 +2,6 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t python-server-monitor .'
@@ -27,9 +21,15 @@ pipeline {
             }
         }
 
-        stage('Test') {
+        stage('Wait and Test') {
             steps {
-                sh 'curl -fsS http://localhost:5001/health'
+                sh '''
+                    sleep 5
+                    docker ps -a
+                    docker logs --tail 30 python-server-monitor-container
+                    curl --retry 10 --retry-connrefused --retry-delay 2 \
+                      --max-time 5 -fsS http://localhost:5001/health
+                '''
             }
         }
     }
